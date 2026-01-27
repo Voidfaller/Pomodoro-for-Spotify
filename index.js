@@ -1,132 +1,91 @@
 const { React, ReactDOM } = Spicetify;
 const { useState, useEffect } = React;
 
-const defaultSettings = {
-    work: 25,
-    shortBreak: 5,
-    longBreak: 15,
-    sessionsBeforeLongBreak: 4
-};
-function SettingsPanel({ settings, onChange }) {
-    return React.createElement("div", { className: "settings-panel" },
-        React.createElement("h2", null, "Pomodoro Settings"),
-        React.createElement("label", null, "Work Duration (minutes):",
-            React.createElement("input", {
-                type: "number",
-                value: settings.work,
-                onChange: e => onChange({ ...settings, work: Number(e.target.value) }),
-                min: 1
-            })
-        ),
-        React.createElement("label", null, "Short Break (minutes):",
-            React.createElement("input", {
-                type: "number",
-                value: settings.shortBreak,
-                onChange: e => onChange({ ...settings, shortBreak: Number(e.target.value) }),
-                min: 1
-            })
-        ),
-        React.createElement("label", null, "Long Break (minutes):",
-            React.createElement("input", {
-                type: "number",
-                value: settings.longBreak,
-                onChange: e => onChange({ ...settings, longBreak: Number(e.target.value) }),
-                min: 1
-            })
-        ),
-        React.createElement("label", null, "Sessions Before Long Break:",
-            React.createElement("input", {
-                type: "number",
-                value: settings.sessionsBeforeLongBreak,
-                onChange: e => onChange({ ...settings, sessionsBeforeLongBreak: Number(e.target.value) }),
-                min: 1
-            })
-        )
+function Digit({ value, onChange }) {
+    const [hover, setHover] = useState(false);
+
+    const increment = () => onChange((value + 1) % 10);
+    const decrement = () => onChange((value + 9) % 10);
+
+    return React.createElement(
+        "div",
+        {
+            style: { position: "relative", display: "inline-flex", flexDirection: "column", alignItems: "center", margin: "0 2px" },
+            onMouseEnter: () => setHover(true),
+            onMouseLeave: () => setHover(false),
+        },
+        hover && React.createElement("button", { onClick: increment, style: arrowStyle }, "▲"),
+        React.createElement("span", { style: { fontSize: "48px", width: "36px", textAlign: "center" } }, value),
+        hover && React.createElement("button", { onClick: decrement, style: arrowStyle }, "▼")
     );
 }
+
+const arrowStyle = {
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "14px",
+    lineHeight: "1",
+    padding: "0",
+    margin: "0",
+};
+
 function PomodoroApp() {
-    const savedSettings = JSON.parse(localStorage.getItem("pomodoroSettings")) || defaultSettings;
-    const [settings, setSettings] = useState(savedSettings);
-
-    // Save to localStorage whenever settings change
-    useEffect(() => {
-        localStorage.setItem("pomodoroSettings", JSON.stringify(settings));
-    }, [settings]);
-    const WORK_DURATION = settings.work * 60;      // 25 minutes
-    const SHORT_BREAK = settings.shortBreak * 60;         // 5 minutes
-    const LONG_BREAK = settings.longBreak * 60;         // 15 minutes
-
-    const [secondsLeft, setSecondsLeft] = useState(WORK_DURATION);
+    // Initialize digits: 25:00
+    const [digits, setDigits] = useState([2, 5, 0, 0]);
     const [isRunning, setIsRunning] = useState(false);
-    const [mode, setMode] = useState("work"); // work, short, long
 
-    // Countdown effect
+    // Convert digits to total seconds
+    const secondsLeft = digits[0] * 600 + digits[1] * 60 + digits[2] * 10 + digits[3];
+
     useEffect(() => {
         if (!isRunning) return;
 
         const interval = setInterval(() => {
-            setSecondsLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(interval);
-                    handleTimerEnd();
-                    return 0;
-                }
-                return prev - 1;
-            });
+            if (secondsLeft <= 0) {
+                clearInterval(interval);
+                setIsRunning(false);
+                return;
+            }
+            let newSeconds = secondsLeft - 1;
+            setDigits([
+                Math.floor(newSeconds / 600),
+                Math.floor((newSeconds % 600) / 60),
+                Math.floor((newSeconds % 60) / 10),
+                newSeconds % 10,
+            ]);
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isRunning]);
-
-    const [sessionCount, setSessionCount] = useState(0);
-
-    function handleTimerEnd() {
-        if (mode === "work") {
-            const nextMode = (sessionCount + 1) % settings.sessionsBeforeLongBreak === 0
-                ? "long"
-                : "short";
-            setMode(nextMode);
-            setSecondsLeft(nextMode === "short" ? SHORT_BREAK : LONG_BREAK);
-            setSessionCount(sessionCount + 1);
-        } else {
-            setMode("work");
-            setSecondsLeft(WORK_DURATION);
-        }
-        setIsRunning(false);
-    }
-
+    }, [isRunning, digits]);
 
     function toggleRunning() {
         setIsRunning(!isRunning);
     }
 
     function resetTimer() {
-        setSecondsLeft(mode === "work" ? WORK_DURATION : SHORT_BREAK);
+        setDigits([2, 5, 0, 0]);
         setIsRunning(false);
     }
 
-    function formatTime(sec) {
-        const m = Math.floor(sec / 60).toString().padStart(2, '0');
-        const s = (sec % 60).toString().padStart(2, '0');
-        return `${m}:${s}`;
-    }
-
-    return React.createElement("div", { style: { textAlign: "center", padding: "20px" } },
-        React.createElement("h1", null, "Pomodoro Timer"),
-        React.createElement("h2", null, mode.charAt(0).toUpperCase() + mode.slice(1)),
-        React.createElement("h1", { style: { fontSize: "48px" } }, formatTime(secondsLeft)),
-        React.createElement("button", { onClick: toggleRunning, style: { marginRight: "10px", backgroundColor: "transparent" } },
-            isRunning ? "Pause" : "Start"
+    return React.createElement(
+        "div",
+        { style: { textAlign: "center", padding: "20px" } },
+        React.createElement("div", { style: { display: "flex", justifyContent: "center", alignItems: "center" } },
+            React.createElement(Digit, { value: digits[0], onChange: val => setDigits([val, digits[1], digits[2], digits[3]]) }),
+            React.createElement(Digit, { value: digits[1], onChange: val => setDigits([digits[0], val, digits[2], digits[3]]) }),
+            React.createElement("span", { style: { fontSize: "48px", margin: "0 4px" } }, ":"),
+            React.createElement(Digit, { value: digits[2], onChange: val => setDigits([digits[0], digits[1], val, digits[3]]) }),
+            React.createElement(Digit, { value: digits[3], onChange: val => setDigits([digits[0], digits[1], digits[2], val]) }),
         ),
-        React.createElement("button", { onClick: resetTimer }, "Reset"),
-        React.createElement(SettingsPanel, {
-            settings,
-            onChange: setSettings
-        })
+        React.createElement("div", { style: { marginTop: "20px" } },
+            React.createElement("button", { onClick: toggleRunning, style: { marginRight: "10px" } }, isRunning ? "Pause" : "Start"),
+            React.createElement("button", { onClick: resetTimer }, "Reset")
+        )
     );
 }
 
-// Main render function required by Spicetify custom apps
+// Required by Spicetify
 function render() {
     return React.createElement(PomodoroApp);
 }
