@@ -1,10 +1,60 @@
 const { React, ReactDOM } = Spicetify;
 const { useState, useEffect } = React;
 
+const defaultSettings = {
+    work: 25,
+    shortBreak: 5,
+    longBreak: 15,
+    sessionsBeforeLongBreak: 4
+};
+function SettingsPanel({ settings, onChange }) {
+    return React.createElement("div", { className: "settings-panel" },
+        React.createElement("h2", null, "Pomodoro Settings"),
+        React.createElement("label", null, "Work Duration (minutes):",
+            React.createElement("input", {
+                type: "number",
+                value: settings.work,
+                onChange: e => onChange({ ...settings, work: Number(e.target.value) }),
+                min: 1
+            })
+        ),
+        React.createElement("label", null, "Short Break (minutes):",
+            React.createElement("input", {
+                type: "number",
+                value: settings.shortBreak,
+                onChange: e => onChange({ ...settings, shortBreak: Number(e.target.value) }),
+                min: 1
+            })
+        ),
+        React.createElement("label", null, "Long Break (minutes):",
+            React.createElement("input", {
+                type: "number",
+                value: settings.longBreak,
+                onChange: e => onChange({ ...settings, longBreak: Number(e.target.value) }),
+                min: 1
+            })
+        ),
+        React.createElement("label", null, "Sessions Before Long Break:",
+            React.createElement("input", {
+                type: "number",
+                value: settings.sessionsBeforeLongBreak,
+                onChange: e => onChange({ ...settings, sessionsBeforeLongBreak: Number(e.target.value) }),
+                min: 1
+            })
+        )
+    );
+}
 function PomodoroApp() {
-    const WORK_DURATION = 25 * 60;      // 25 minutes
-    const SHORT_BREAK = 5 * 60;         // 5 minutes
-    const LONG_BREAK = 15 * 60;         // 15 minutes
+    const savedSettings = JSON.parse(localStorage.getItem("pomodoroSettings")) || defaultSettings;
+    const [settings, setSettings] = useState(savedSettings);
+
+    // Save to localStorage whenever settings change
+    useEffect(() => {
+        localStorage.setItem("pomodoroSettings", JSON.stringify(settings));
+    }, [settings]);
+    const WORK_DURATION = settings.work * 60;      // 25 minutes
+    const SHORT_BREAK = settings.shortBreak * 60;         // 5 minutes
+    const LONG_BREAK = settings.longBreak * 60;         // 15 minutes
 
     const [secondsLeft, setSecondsLeft] = useState(WORK_DURATION);
     const [isRunning, setIsRunning] = useState(false);
@@ -28,14 +78,23 @@ function PomodoroApp() {
         return () => clearInterval(interval);
     }, [isRunning]);
 
-    function handleTimerEnd() {
-        if (mode === "work") setMode("short");
-        else if (mode === "short") setMode("work");
-        else setMode("work");
+    const [sessionCount, setSessionCount] = useState(0);
 
-        setSecondsLeft(mode === "work" ? SHORT_BREAK : WORK_DURATION);
+    function handleTimerEnd() {
+        if (mode === "work") {
+            const nextMode = (sessionCount + 1) % settings.sessionsBeforeLongBreak === 0
+                ? "long"
+                : "short";
+            setMode(nextMode);
+            setSecondsLeft(nextMode === "short" ? SHORT_BREAK : LONG_BREAK);
+            setSessionCount(sessionCount + 1);
+        } else {
+            setMode("work");
+            setSecondsLeft(WORK_DURATION);
+        }
         setIsRunning(false);
     }
+
 
     function toggleRunning() {
         setIsRunning(!isRunning);
@@ -59,7 +118,11 @@ function PomodoroApp() {
         React.createElement("button", { onClick: toggleRunning, style: { marginRight: "10px", backgroundColor: "transparent" } },
             isRunning ? "Pause" : "Start"
         ),
-        React.createElement("button", { onClick: resetTimer }, "Reset")
+        React.createElement("button", { onClick: resetTimer }, "Reset"),
+        React.createElement(SettingsPanel, {
+            settings,
+            onChange: setSettings
+        })
     );
 }
 
