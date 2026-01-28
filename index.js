@@ -21,9 +21,9 @@ function Digit({ value, onChange, decimal = false, disabled = false }) {
             onMouseEnter: () => !disabled && setHover(true),
             onMouseLeave: () => setHover(false),
         },
-        !disabled && hover && React.createElement("button", { onClick: increment, className: "gp-arrow" }, "▲"),
+        React.createElement("button", { onClick: increment, className: `gp-arrow${disabled || !hover ? " gp-arrow--hidden" : ""}`, disabled: disabled }, "▲"),
         React.createElement("span", { className: "gp-digit-value" }, value),
-        !disabled && hover && React.createElement("button", { onClick: decrement, className: "gp-arrow" }, "▼")
+        React.createElement("button", { onClick: decrement, className: `gp-arrow${disabled || !hover ? " gp-arrow--hidden" : ""}`, disabled: disabled }, "▼")
     );
 }
 
@@ -172,11 +172,13 @@ function PomodoroApp() {
         return renderAmountDigits(isRunning);
     };
 
+    const appClassName = `gp-app${isRunning ? " gp-running" : ""} gp-phase-${phase}`;
+
     return React.createElement(
         "div",
-        { className: "gp-app" },
-        React.createElement("div", { className: "gp-view-label" }, viewLabel),
-        React.createElement("div", { className: "gp-timer" }, renderViewDigits()),
+        { className: appClassName },
+        React.createElement("div", { className: "gp-view-label gp-animate", key: `label-${viewMode}` }, viewLabel),
+        React.createElement("div", { className: "gp-timer gp-animate", key: viewMode }, renderViewDigits()),
         isRunning && viewMode !== "timer" && React.createElement("div", { className: "gp-view-note" }, "Settings locked while running"),
         React.createElement("div", { className: "gp-controls" },
             React.createElement("button", { onClick: toggleRunning, className: "gp-button gp-button--spaced" }, isRunning ? "Pause" : "Start"),

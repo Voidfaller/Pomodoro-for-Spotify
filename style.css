@@ -62,6 +62,49 @@
 	opacity: 0.6;
 }
 
+.gp-animate {
+	animation: gp-fade-slide 200ms ease;
+}
+
+.gp-button {
+	transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.gp-button:hover {
+	transform: translateY(-1px);
+}
+
+.gp-button:active {
+	transform: translateY(0);
+	opacity: 0.8;
+}
+
 .gp-button--spaced {
 	margin-right: 10px;
+}
+
+.gp-arrow {
+	opacity: 1;
+	transition: opacity 150ms ease;
+	cursor: pointer;
+}
+
+.gp-arrow--hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.gp-arrow:hover:not(:disabled) {
+	transform: scale(1.1);
+}
+
+@keyframes gp-fade-slide {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
