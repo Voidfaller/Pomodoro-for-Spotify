@@ -1,12 +1,19 @@
 const { React, ReactDOM } = Spicetify;
 const { useState, useEffect } = React;
 
-function Digit({ value, onChange }) {
+function Digit({ value, onChange, decimal = false }) {
     const [hover, setHover] = useState(false);
 
-    const increment = () => onChange((value + 1) % 10);
-    const decrement = () => onChange((value + 9) % 10);
+    let increment, decrement;
 
+    if (decimal) {
+        increment = () => onChange((value + 1) % 6);
+        decrement = () => onChange((value + 5) % 6);
+    }
+    else {
+        increment = () => onChange((value + 1) % 10);
+        decrement = () => onChange((value + 9) % 10);
+    }
     return React.createElement(
         "div",
         {
@@ -70,12 +77,12 @@ function PomodoroApp() {
 
     return React.createElement(
         "div",
-        { style: { textAlign: "center", padding: "20px" } },
-        React.createElement("div", { style: { display: "flex", justifyContent: "center", alignItems: "center" } },
+        { style: { textAlign: "center", padding: "20px", height: "100vh", width: "100vw" } },
+        React.createElement("div", { style: { display: "flex", justifyContent: "center", alignItems: "center", height: "20vh" } },
             React.createElement(Digit, { value: digits[0], onChange: val => setDigits([val, digits[1], digits[2], digits[3]]) }),
             React.createElement(Digit, { value: digits[1], onChange: val => setDigits([digits[0], val, digits[2], digits[3]]) }),
             React.createElement("span", { style: { fontSize: "48px", margin: "0 4px" } }, ":"),
-            React.createElement(Digit, { value: digits[2], onChange: val => setDigits([digits[0], digits[1], val, digits[3]]) }),
+            React.createElement(Digit, { value: digits[2], onChange: val => setDigits([digits[0], digits[1], val, digits[3]]), decimal: true }),
             React.createElement(Digit, { value: digits[3], onChange: val => setDigits([digits[0], digits[1], digits[2], val]) }),
         ),
         React.createElement("div", { style: { marginTop: "20px" } },
