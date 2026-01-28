@@ -1,0 +1,67 @@
+.gp-app {
+	text-align: center;
+	padding: 20px;
+	height: 100vh;
+	width: 100vw;
+}
+
+.gp-timer {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 20vh;
+}
+
+.gp-digit {
+	position: relative;
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	margin: 0 2px;
+}
+
+.gp-digit--disabled {
+	opacity: 0.6;
+	pointer-events: none;
+}
+
+.gp-digit-value {
+	font-size: 48px;
+	width: 36px;
+	text-align: center;
+}
+
+.gp-arrow {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1;
+	padding: 0;
+	margin: 0;
+}
+
+.gp-colon {
+	font-size: 48px;
+	margin: 0 4px;
+}
+
+.gp-controls {
+	margin-top: 20px;
+}
+
+.gp-view-label {
+	font-size: 16px;
+	margin-bottom: 6px;
+	opacity: 0.8;
+}
+
+.gp-view-note {
+	margin-top: 8px;
+	font-size: 12px;
+	opacity: 0.6;
+}
+
+.gp-button--spaced {
+	margin-right: 10px;
+}

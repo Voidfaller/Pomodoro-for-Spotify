@@ -1,7 +1,7 @@
 const { React, ReactDOM } = Spicetify;
 const { useState, useEffect } = React;
 
-function Digit({ value, onChange, decimal = false }) {
+function Digit({ value, onChange, decimal = false, disabled = false }) {
     const [hover, setHover] = useState(false);
 
     let increment, decrement;
@@ -17,33 +17,32 @@ function Digit({ value, onChange, decimal = false }) {
     return React.createElement(
         "div",
         {
-            style: { position: "relative", display: "inline-flex", flexDirection: "column", alignItems: "center", margin: "0 2px" },
-            onMouseEnter: () => setHover(true),
+            className: disabled ? "gp-digit gp-digit--disabled" : "gp-digit",
+            onMouseEnter: () => !disabled && setHover(true),
             onMouseLeave: () => setHover(false),
         },
-        hover && React.createElement("button", { onClick: increment, style: arrowStyle }, "▲"),
-        React.createElement("span", { style: { fontSize: "48px", width: "36px", textAlign: "center" } }, value),
-        hover && React.createElement("button", { onClick: decrement, style: arrowStyle }, "▼")
+        !disabled && hover && React.createElement("button", { onClick: increment, className: "gp-arrow" }, "▲"),
+        React.createElement("span", { className: "gp-digit-value" }, value),
+        !disabled && hover && React.createElement("button", { onClick: decrement, className: "gp-arrow" }, "▼")
     );
 }
-
-const arrowStyle = {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-    lineHeight: "1",
-    padding: "0",
-    margin: "0",
-};
 
 function PomodoroApp() {
     // Initialize digits: 25:00
     const [digits, setDigits] = useState([2, 5, 0, 0]);
+    const [pomodoroDigits, setPomodoroDigits] = useState([2, 5, 0, 0]);
+    const [shortBreakDigits, setShortBreakDigits] = useState([0, 5, 0, 0]);
+    const [longBreakDigits, setLongBreakDigits] = useState([1, 5, 0, 0]);
+    const [pomodoroAmount, setPomodoroAmount] = useState(4);
+    const [viewMode, setViewMode] = useState("timer");
+    const [phase, setPhase] = useState("work");
+    const [completedPomodoros, setCompletedPomodoros] = useState(0);
     const [isRunning, setIsRunning] = useState(false);
 
     // Convert digits to total seconds
     const secondsLeft = digits[0] * 600 + digits[1] * 60 + digits[2] * 10 + digits[3];
+
+    const normalizedPomodoroAmount = Math.max(1, pomodoroAmount);
 
     useEffect(() => {
         if (!isRunning) return;
@@ -51,7 +50,21 @@ function PomodoroApp() {
         const interval = setInterval(() => {
             if (secondsLeft <= 0) {
                 clearInterval(interval);
-                setIsRunning(false);
+                if (phase === "work") {
+                    const nextCompleted = completedPomodoros + 1;
+                    if (nextCompleted >= normalizedPomodoroAmount) {
+                        setPhase("longBreak");
+                        setCompletedPomodoros(0);
+                        setDigits([...longBreakDigits]);
+                    } else {
+                        setPhase("shortBreak");
+                        setCompletedPomodoros(nextCompleted);
+                        setDigits([...shortBreakDigits]);
+                    }
+                } else {
+                    setPhase("work");
+                    setDigits([...pomodoroDigits]);
+                }
                 return;
             }
             let newSeconds = secondsLeft - 1;
@@ -64,30 +77,111 @@ function PomodoroApp() {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isRunning, digits]);
+    }, [isRunning, digits, phase, completedPomodoros, normalizedPomodoroAmount, shortBreakDigits, longBreakDigits, pomodoroDigits]);
 
     function toggleRunning() {
         setIsRunning(!isRunning);
     }
 
     function resetTimer() {
-        setDigits([2, 5, 0, 0]);
+        setDigits([...pomodoroDigits]);
+        setPhase("work");
+        setCompletedPomodoros(0);
         setIsRunning(false);
     }
 
+    function toggleViewMode() {
+        setViewMode(prev => {
+            if (prev === "timer") return "longBreak";
+            if (prev === "longBreak") return "shortBreak";
+            if (prev === "shortBreak") return "pomodoroAmount";
+            return "timer";
+        });
+    }
+
+    const viewLabel = viewMode === "timer"
+        ? "Timer"
+        : viewMode === "longBreak"
+            ? "Long Break"
+            : viewMode === "shortBreak"
+                ? "Short Break"
+                : "Pomodoro Cycles";
+
+    const renderTimeDigits = (timeDigits, setTimeDigits, disabled) => ([
+        React.createElement(Digit, {
+            key: "t0",
+            value: timeDigits[0],
+            onChange: val => setTimeDigits([val, timeDigits[1], timeDigits[2], timeDigits[3]]),
+            disabled,
+        }),
+        React.createElement(Digit, {
+            key: "t1",
+            value: timeDigits[1],
+            onChange: val => setTimeDigits([timeDigits[0], val, timeDigits[2], timeDigits[3]]),
+            disabled,
+        }),
+        React.createElement("span", { key: "colon", className: "gp-colon" }, ":"),
+        React.createElement(Digit, {
+            key: "t2",
+            value: timeDigits[2],
+            onChange: val => setTimeDigits([timeDigits[0], timeDigits[1], val, timeDigits[3]]),
+            decimal: true,
+            disabled,
+        }),
+        React.createElement(Digit, {
+            key: "t3",
+            value: timeDigits[3],
+            onChange: val => setTimeDigits([timeDigits[0], timeDigits[1], timeDigits[2], val]),
+            disabled,
+        }),
+    ]);
+
+    const renderAmountDigits = (disabled) => {
+        const tens = Math.floor(pomodoroAmount / 10);
+        const ones = pomodoroAmount % 10;
+
+        return [
+            React.createElement(Digit, {
+                key: "a0",
+                value: tens,
+                onChange: val => setPomodoroAmount((val * 10) + ones),
+                disabled,
+            }),
+            React.createElement(Digit, {
+                key: "a1",
+                value: ones,
+                onChange: val => setPomodoroAmount((tens * 10) + val),
+                disabled,
+            })
+        ];
+    };
+
+    const renderViewDigits = () => {
+        if (viewMode === "timer") {
+            return renderTimeDigits(digits, setDigits, isRunning);
+        }
+
+        if (viewMode === "longBreak") {
+            return renderTimeDigits(longBreakDigits, setLongBreakDigits, isRunning);
+        }
+
+        if (viewMode === "shortBreak") {
+            return renderTimeDigits(shortBreakDigits, setShortBreakDigits, isRunning);
+        }
+
+        return renderAmountDigits(isRunning);
+    };
+
     return React.createElement(
         "div",
-        { style: { textAlign: "center", padding: "20px", height: "100vh", width: "100vw" } },
-        React.createElement("div", { style: { display: "flex", justifyContent: "center", alignItems: "center", height: "20vh" } },
-            React.createElement(Digit, { value: digits[0], onChange: val => setDigits([val, digits[1], digits[2], digits[3]]) }),
-            React.createElement(Digit, { value: digits[1], onChange: val => setDigits([digits[0], val, digits[2], digits[3]]) }),
-            React.createElement("span", { style: { fontSize: "48px", margin: "0 4px" } }, ":"),
-            React.createElement(Digit, { value: digits[2], onChange: val => setDigits([digits[0], digits[1], val, digits[3]]), decimal: true }),
-            React.createElement(Digit, { value: digits[3], onChange: val => setDigits([digits[0], digits[1], digits[2], val]) }),
-        ),
-        React.createElement("div", { style: { marginTop: "20px" } },
-            React.createElement("button", { onClick: toggleRunning, style: { marginRight: "10px" } }, isRunning ? "Pause" : "Start"),
-            React.createElement("button", { onClick: resetTimer }, "Reset")
+        { className: "gp-app" },
+        React.createElement("div", { className: "gp-view-label" }, viewLabel),
+        React.createElement("div", { className: "gp-timer" }, renderViewDigits()),
+        isRunning && viewMode !== "timer" && React.createElement("div", { className: "gp-view-note" }, "Settings locked while running"),
+        React.createElement("div", { className: "gp-controls" },
+            React.createElement("button", { onClick: toggleRunning, className: "gp-button gp-button--spaced" }, isRunning ? "Pause" : "Start"),
+            React.createElement("button", { onClick: resetTimer, className: "gp-button gp-button--spaced" }, "Reset"),
+            React.createElement("button", { onClick: toggleViewMode, className: "gp-button" }, "Toggle View")
         )
     );
 }
