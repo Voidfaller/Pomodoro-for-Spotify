@@ -3,13 +3,23 @@
 	padding: 20px;
 	height: 100vh;
 	width: 100vw;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.gp-timer-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 10px;
+	height: 20vh;
 }
 
 .gp-timer {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	height: 20vh;
 }
 
 .gp-digit {
@@ -52,7 +62,7 @@
 
 .gp-view-label {
 	font-size: 16px;
-	margin-bottom: 6px;
+	margin-bottom: 2px;
 	opacity: 0.8;
 }
 
@@ -96,6 +106,37 @@
 
 .gp-arrow:hover:not(:disabled) {
 	transform: scale(1.1);
+}
+
+.gp-icon-button {
+	width: 32px;
+	height: 32px;
+	cursor: pointer;
+	transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.gp-icon-button:hover {
+	transform: translateY(-1px) scale(1.05);
+}
+
+.gp-icon-button:active {
+	transform: translateY(0) scale(0.95);
+	opacity: 0.8;
+}
+
+.gp-toggle-view-btn {
+	width: 20px;
+	height: 20px;
+	cursor: pointer;
+	transition: none;
+}
+
+.gp-toggle-view-btn:hover {
+	transform: none;
+}
+
+.gp-toggle-view-btn:active {
+	transform: scale(0.95);
 }
 
 @keyframes gp-fade-slide {
