@@ -104,6 +104,12 @@ function PomodoroApp() {
             }
 
         }
+        
+        // Sync running state from clock to ensure UI matches actual timer state
+        if (window.GPClock && window.GPClock.isRunning()) {
+            setIsRunning(true);
+        }
+        
         window.addEventListener("gp-pomodoro-tick", syncFromClock);
         window.addEventListener("gp-pomodoro-finished", onFinished);
 
