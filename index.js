@@ -21,15 +21,28 @@ function Digit({ value, onChange, decimal = false, disabled = false }) {
             onMouseEnter: () => !disabled && setHover(true),
             onMouseLeave: () => setHover(false),
         },
-        !disabled && hover && React.createElement("button", { onClick: increment, className: "gp-arrow" }, "▲"),
+        React.createElement("button", { onClick: increment, className: `gp-arrow${disabled || !hover ? " gp-arrow--hidden" : ""}`, disabled: disabled }, "▲"),
         React.createElement("span", { className: "gp-digit-value" }, value),
-        !disabled && hover && React.createElement("button", { onClick: decrement, className: "gp-arrow" }, "▼")
+        React.createElement("button", { onClick: decrement, className: `gp-arrow${disabled || !hover ? " gp-arrow--hidden" : ""}`, disabled: disabled }, "▼")
     );
 }
 
 function PomodoroApp() {
     // Initialize digits: 25:00
-    const [digits, setDigits] = useState([2, 5, 0, 0]);
+    const [digits, setDigits] = useState(() => {
+        if (window.GPClock && window.GPClock.isRunning()) {
+            const seconds = window.GPClock.getRemainingSeconds();
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return [
+                Math.floor(minutes / 10),
+                minutes % 10,
+                Math.floor(secs / 10),
+                secs % 10
+            ];
+        }
+        return [2, 5, 0, 0];
+    });
     const [pomodoroDigits, setPomodoroDigits] = useState([2, 5, 0, 0]);
     const [shortBreakDigits, setShortBreakDigits] = useState([0, 5, 0, 0]);
     const [longBreakDigits, setLongBreakDigits] = useState([1, 5, 0, 0]);
@@ -45,45 +58,83 @@ function PomodoroApp() {
     const normalizedPomodoroAmount = Math.max(1, pomodoroAmount);
 
     useEffect(() => {
-        if (!isRunning) return;
+        function syncFromClock() {
+            const seconds = window.GPClock.getRemainingSeconds();
 
-        const interval = setInterval(() => {
-            if (secondsLeft <= 0) {
-                clearInterval(interval);
-                if (phase === "work") {
-                    const nextCompleted = completedPomodoros + 1;
-                    if (nextCompleted >= normalizedPomodoroAmount) {
-                        setPhase("longBreak");
-                        setCompletedPomodoros(0);
-                        setDigits([...longBreakDigits]);
-                    } else {
-                        setPhase("shortBreak");
-                        setCompletedPomodoros(nextCompleted);
-                        setDigits([...shortBreakDigits]);
-                    }
-                } else {
-                    setPhase("work");
-                    setDigits([...pomodoroDigits]);
-                }
-                return;
-            }
-            let newSeconds = secondsLeft - 1;
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+
             setDigits([
-                Math.floor(newSeconds / 600),
-                Math.floor((newSeconds % 600) / 60),
-                Math.floor((newSeconds % 60) / 10),
-                newSeconds % 10,
+                Math.floor(minutes / 10),
+                minutes % 10,
+                Math.floor(secs / 10),
+                secs % 10
             ]);
-        }, 1000);
+        }
 
-        return () => clearInterval(interval);
-    }, [isRunning, digits, phase, completedPomodoros, normalizedPomodoroAmount, shortBreakDigits, longBreakDigits, pomodoroDigits]);
+        function onFinished() {
+            if (phase === "work") {
+                const nextCompleted = completedPomodoros + 1;
+                if (nextCompleted >= normalizedPomodoroAmount) {
+                    setPhase("longBreak");
+                    setCompletedPomodoros(0);
+                    setDigits([...longBreakDigits]);
+                    window.GPClock.start(longBreakDigits[0] * 600 +
+                        longBreakDigits[1] * 60 +
+                        longBreakDigits[2] * 10 +
+                        longBreakDigits[3]);
+                } else {
+                    setPhase("shortBreak");
+                    setCompletedPomodoros(nextCompleted);
+                    setDigits([...shortBreakDigits]);
+                    window.GPClock.start(shortBreakDigits[0] * 600 +
+                        shortBreakDigits[1] * 60 +
+                        shortBreakDigits[2] * 10 +
+                        shortBreakDigits[3]);
+                }
+            }
+            else {
+                setPhase("work");
+                setDigits([...pomodoroDigits]);
+                window.GPClock.start(pomodoroDigits[0] * 600 +
+                    pomodoroDigits[1] * 60 +
+                    pomodoroDigits[2] * 10 +
+                    pomodoroDigits[3]);
+
+            }
+
+        }
+        window.addEventListener("gp-pomodoro-tick", syncFromClock);
+        window.addEventListener("gp-pomodoro-finished", onFinished);
+
+        syncFromClock();
+
+        return () => {
+            window.removeEventListener("gp-pomodoro-tick", syncFromClock);
+            window.removeEventListener("gp-pomodoro-finished", onFinished);
+        };
+    }, [
+        phase,
+        completedPomodoros,
+        normalizedPomodoroAmount,
+        pomodoroDigits,
+        shortBreakDigits,
+        longBreakDigits
+    ])
 
     function toggleRunning() {
-        setIsRunning(!isRunning);
+        if (isRunning) {
+            window.GPClock.stop();
+            setIsRunning(false);
+        }
+        else {
+            window.GPClock.start(secondsLeft);
+            setIsRunning(true);
+        }
     }
 
     function resetTimer() {
+        window.GPClock.stop();
         setDigits([...pomodoroDigits]);
         setPhase("work");
         setCompletedPomodoros(0);
@@ -172,11 +223,13 @@ function PomodoroApp() {
         return renderAmountDigits(isRunning);
     };
 
+    const appClassName = `gp-app${isRunning ? " gp-running" : ""} gp-phase-${phase}`;
+
     return React.createElement(
         "div",
-        { className: "gp-app" },
-        React.createElement("div", { className: "gp-view-label" }, viewLabel),
-        React.createElement("div", { className: "gp-timer" }, renderViewDigits()),
+        { className: appClassName },
+        React.createElement("div", { className: "gp-view-label gp-animate", key: `label-${viewMode}` }, viewLabel),
+        React.createElement("div", { className: "gp-timer gp-animate", key: viewMode }, renderViewDigits()),
         isRunning && viewMode !== "timer" && React.createElement("div", { className: "gp-view-note" }, "Settings locked while running"),
         React.createElement("div", { className: "gp-controls" },
             React.createElement("button", { onClick: toggleRunning, className: "gp-button gp-button--spaced" }, isRunning ? "Pause" : "Start"),
@@ -185,6 +238,7 @@ function PomodoroApp() {
         )
     );
 }
+
 
 // Required by Spicetify
 function render() {
