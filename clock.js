@@ -25,7 +25,9 @@
     }
 
     function stop() {
+        remaining = 0;
         localStorage.removeItem(RUNNING_KEY);
+        localStorage.removeItem(STORAGE_KEY);
     }
 
     function isRunning() {

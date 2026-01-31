@@ -29,7 +29,20 @@ function Digit({ value, onChange, decimal = false, disabled = false }) {
 
 function PomodoroApp() {
     // Initialize digits: 25:00
-    const [digits, setDigits] = useState([2, 5, 0, 0]);
+    const [digits, setDigits] = useState(() => {
+        if (window.GPClock && window.GPClock.isRunning()) {
+            const seconds = window.GPClock.getRemainingSeconds();
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return [
+                Math.floor(minutes / 10),
+                minutes % 10,
+                Math.floor(secs / 10),
+                secs % 10
+            ];
+        }
+        return [2, 5, 0, 0];
+    });
     const [pomodoroDigits, setPomodoroDigits] = useState([2, 5, 0, 0]);
     const [shortBreakDigits, setShortBreakDigits] = useState([0, 5, 0, 0]);
     const [longBreakDigits, setLongBreakDigits] = useState([1, 5, 0, 0]);
@@ -121,6 +134,7 @@ function PomodoroApp() {
     }
 
     function resetTimer() {
+        window.GPClock.stop();
         setDigits([...pomodoroDigits]);
         setPhase("work");
         setCompletedPomodoros(0);
