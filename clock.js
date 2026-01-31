@@ -54,11 +54,12 @@
         localStorage.setItem(STORAGE_KEY, remaining);
 
         if (remaining <= 0) {
-            remaining = 0;
-            stop();
+            remaining = 1; // Keep at 1 to prevent showing 00:00
+            localStorage.removeItem(RUNNING_KEY);
             window.dispatchEvent(new Event("gp-pomodoro-finished"));
+        } else {
+            window.dispatchEvent(new Event("gp-pomodoro-tick"));
         }
-        window.dispatchEvent(new Event("gp-pomodoro-tick"));
     }, 1000);
 
     window.GPClock = {
