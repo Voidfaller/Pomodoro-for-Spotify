@@ -5,11 +5,18 @@
 	width: 100vw;
 }
 
+.gp-timer-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 10px;
+	height: 20vh;
+}
+
 .gp-timer {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	height: 20vh;
 }
 
 .gp-digit {
@@ -96,6 +103,21 @@
 
 .gp-arrow:hover:not(:disabled) {
 	transform: scale(1.1);
+}
+
+.gp-toggle-view-btn {
+	width: 20px;
+	height: 20px;
+	cursor: pointer;
+	transition: none;
+}
+
+.gp-toggle-view-btn:hover {
+	transform: none;
+}
+
+.gp-toggle-view-btn:active {
+	transform: scale(0.95);
 }
 
 @keyframes gp-fade-slide {

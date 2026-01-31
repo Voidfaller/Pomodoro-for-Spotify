@@ -174,16 +174,25 @@ function PomodoroApp() {
 
     const appClassName = `gp-app${isRunning ? " gp-running" : ""} gp-phase-${phase}`;
 
-    return React.createElement(
+    const whiteCircle = encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <circle cx="12" cy="12" r="10" fill="none" stroke="white" stroke-width="2"/>
+</svg>
+`); return React.createElement(
         "div",
         { className: appClassName },
+        // View Label
         React.createElement("div", { className: "gp-view-label gp-animate", key: `label-${viewMode}` }, viewLabel),
-        React.createElement("div", { className: "gp-timer gp-animate", key: viewMode }, renderViewDigits()),
+
+        // Timer + toggle button container
+        React.createElement("div", { className: "gp-timer-container gp-animate", key: viewMode },
+            React.createElement("div", { className: "gp-timer" }, renderViewDigits()),
+            React.createElement("img", { src: `data:image/svg+xml,${whiteCircle}`, onClick: toggleViewMode, className: "gp-toggle-view-btn", title: "Toggle View", alt: "Toggle View" })
+        ),
         isRunning && viewMode !== "timer" && React.createElement("div", { className: "gp-view-note" }, "Settings locked while running"),
         React.createElement("div", { className: "gp-controls" },
             React.createElement("button", { onClick: toggleRunning, className: "gp-button gp-button--spaced" }, isRunning ? "Pause" : "Start"),
             React.createElement("button", { onClick: resetTimer, className: "gp-button gp-button--spaced" }, "Reset"),
-            React.createElement("button", { onClick: toggleViewMode, className: "gp-button" }, "Toggle View")
         )
     );
 }
