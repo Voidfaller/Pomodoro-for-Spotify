@@ -1,6 +1,24 @@
 const { React, ReactDOM } = Spicetify;
 const { useState, useEffect } = React;
 
+// Load settings from localStorage
+function loadSettings() {
+    const saved = localStorage.getItem('gp_pomodoro_settings');
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+}
+
+// Save settings to localStorage
+function saveSettings(settings) {
+    localStorage.setItem('gp_pomodoro_settings', JSON.stringify(settings));
+}
+
 function Digit({ value, onChange, decimal = false, disabled = false, inputRef, onInputComplete }) {
     const [hover, setHover] = useState(false);
 
@@ -65,7 +83,20 @@ function Digit({ value, onChange, decimal = false, disabled = false, inputRef, o
 }
 
 function PomodoroApp() {
-    // Initialize digits: 25:00
+    // Load saved settings or use defaults
+    const savedSettings = loadSettings();
+    
+    const [pomodoroDigits, setPomodoroDigits] = useState(savedSettings?.pomodoroDigits || [2, 5, 0, 0]);
+    const [shortBreakDigits, setShortBreakDigits] = useState(savedSettings?.shortBreakDigits || [0, 5, 0, 0]);
+    const [longBreakDigits, setLongBreakDigits] = useState(savedSettings?.longBreakDigits || [1, 5, 0, 0]);
+    const [pomodoroAmount, setPomodoroAmount] = useState(savedSettings?.pomodoroAmount || 4);
+    
+    // Initialize phase from clock
+    const [phase, setPhase] = useState(() => {
+        return (window.GPClock && window.GPClock.getPhase) ? window.GPClock.getPhase() : "work";
+    });
+    
+    // Initialize digits based on current phase
     const [digits, setDigits] = useState(() => {
         if (window.GPClock && window.GPClock.isRunning()) {
             const seconds = window.GPClock.getRemainingSeconds();
@@ -78,14 +109,16 @@ function PomodoroApp() {
                 secs % 10
             ];
         }
-        return [2, 5, 0, 0];
+        // Load digits based on current phase
+        const currentPhase = (window.GPClock && window.GPClock.getPhase) ? window.GPClock.getPhase() : "work";
+        if (currentPhase === "longBreak") {
+            return [...(savedSettings?.longBreakDigits || [1, 5, 0, 0])];
+        } else if (currentPhase === "shortBreak") {
+            return [...(savedSettings?.shortBreakDigits || [0, 5, 0, 0])];
+        }
+        return [...(savedSettings?.pomodoroDigits || [2, 5, 0, 0])];
     });
-    const [pomodoroDigits, setPomodoroDigits] = useState([2, 5, 0, 0]);
-    const [shortBreakDigits, setShortBreakDigits] = useState([0, 5, 0, 0]);
-    const [longBreakDigits, setLongBreakDigits] = useState([1, 5, 0, 0]);
-    const [pomodoroAmount, setPomodoroAmount] = useState(4);
     const [viewMode, setViewMode] = useState("timer");
-    const [phase, setPhase] = useState("work");
     const [completedPomodoros, setCompletedPomodoros] = useState(0);
     const [isRunning, setIsRunning] = useState(false);
 
@@ -96,6 +129,16 @@ function PomodoroApp() {
     const secondsLeft = digits[0] * 600 + digits[1] * 60 + digits[2] * 10 + digits[3];
 
     const normalizedPomodoroAmount = Math.max(1, pomodoroAmount);
+
+    // Save settings whenever they change
+    useEffect(() => {
+        saveSettings({
+            pomodoroDigits,
+            shortBreakDigits,
+            longBreakDigits,
+            pomodoroAmount
+        });
+    }, [pomodoroDigits, shortBreakDigits, longBreakDigits, pomodoroAmount]);
 
     useEffect(() => {
         function syncFromClock() {
@@ -113,37 +156,49 @@ function PomodoroApp() {
         }
 
         function onFinished() {
+            // Reload settings to get the latest user-configured values
+            const currentSettings = loadSettings();
+            const currentPomodoroDigits = currentSettings?.pomodoroDigits || [2, 5, 0, 0];
+            const currentShortBreakDigits = currentSettings?.shortBreakDigits || [0, 5, 0, 0];
+            const currentLongBreakDigits = currentSettings?.longBreakDigits || [1, 5, 0, 0];
+            
+            // Stop and immediately restart with the appropriate phase
             if (phase === "work") {
                 const nextCompleted = completedPomodoros + 1;
                 if (nextCompleted >= normalizedPomodoroAmount) {
+                    const nextSeconds = currentLongBreakDigits[0] * 600 +
+                        currentLongBreakDigits[1] * 60 +
+                        currentLongBreakDigits[2] * 10 +
+                        currentLongBreakDigits[3];
                     setPhase("longBreak");
                     window.GPClock.setPhase("longBreak");
                     setCompletedPomodoros(0);
-                    setDigits([...longBreakDigits]);
-                    window.GPClock.start(longBreakDigits[0] * 600 +
-                        longBreakDigits[1] * 60 +
-                        longBreakDigits[2] * 10 +
-                        longBreakDigits[3]);
+                    setDigits([...currentLongBreakDigits]);
+                    window.GPClock.start(nextSeconds);
+                    setIsRunning(true);
                 } else {
+                    const nextSeconds = currentShortBreakDigits[0] * 600 +
+                        currentShortBreakDigits[1] * 60 +
+                        currentShortBreakDigits[2] * 10 +
+                        currentShortBreakDigits[3];
                     setPhase("shortBreak");
                     window.GPClock.setPhase("shortBreak");
                     setCompletedPomodoros(nextCompleted);
-                    setDigits([...shortBreakDigits]);
-                    window.GPClock.start(shortBreakDigits[0] * 600 +
-                        shortBreakDigits[1] * 60 +
-                        shortBreakDigits[2] * 10 +
-                        shortBreakDigits[3]);
+                    setDigits([...currentShortBreakDigits]);
+                    window.GPClock.start(nextSeconds);
+                    setIsRunning(true);
                 }
             }
             else {
+                const nextSeconds = currentPomodoroDigits[0] * 600 +
+                    currentPomodoroDigits[1] * 60 +
+                    currentPomodoroDigits[2] * 10 +
+                    currentPomodoroDigits[3];
                 setPhase("work");
                 window.GPClock.setPhase("work");
-                setDigits([...pomodoroDigits]);
-                window.GPClock.start(pomodoroDigits[0] * 600 +
-                    pomodoroDigits[1] * 60 +
-                    pomodoroDigits[2] * 10 +
-                    pomodoroDigits[3]);
-
+                setDigits([...currentPomodoroDigits]);
+                window.GPClock.start(nextSeconds);
+                setIsRunning(true);
             }
 
         }
@@ -177,8 +232,11 @@ function PomodoroApp() {
             setIsRunning(false);
         }
         else {
+            // Use pomodoroDigits when starting from stopped state
+            const startSeconds = pomodoroDigits[0] * 600 + pomodoroDigits[1] * 60 + pomodoroDigits[2] * 10 + pomodoroDigits[3];
+            setDigits([...pomodoroDigits]);
             window.GPClock.setPhase(phase);
-            window.GPClock.start(secondsLeft);
+            window.GPClock.start(startSeconds);
             setIsRunning(true);
         }
     }
@@ -274,6 +332,15 @@ function PomodoroApp() {
 
     const renderViewDigits = () => {
         if (viewMode === "timer") {
+            // When in timer mode and not running, edit pomodoroDigits directly
+            if (!isRunning) {
+                const updatePomodoroDigits = (newDigits) => {
+                    setPomodoroDigits(newDigits);
+                    setDigits(newDigits);
+                };
+                return renderTimeDigits(pomodoroDigits, updatePomodoroDigits, isRunning);
+            }
+            // When running, just display the current digits
             return renderTimeDigits(digits, setDigits, isRunning);
         }
 
