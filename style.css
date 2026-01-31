@@ -163,31 +163,43 @@
 .gp-navbar-timer {
 	display: flex;
 	align-items: center;
-	height: 40px;
+	gap: 8px;
+	height: 36px;
 	padding: 0 12px;
 	background: rgba(255, 255, 255, 0.1);
-	border-radius: 24px;
-	font-size: 14px;
-	font-weight: 500;
+	border-radius: 6px;
+	font-size: 13px;
 	color: white;
 	backdrop-filter: blur(10px);
 	cursor: default;
 	user-select: none;
 }
 
-.gp-navbar-timer-display {
-	font-family: 'Monaco', 'Courier New', monospace;
-	letter-spacing: 1px;
-	animation: gp-timer-pulse 1s infinite;
+.gp-navbar-timer-icon {
+	display: flex;
+	align-items: center;
+	opacity: 0.9;
 }
 
-@keyframes gp-timer-pulse {
-	0%, 100% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0.7;
-	}
+.gp-navbar-timer-info {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.gp-navbar-timer-label {
+	font-size: 10px;
+	opacity: 0.7;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.gp-navbar-timer-display {
+	font-family: 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.5px;
 }
 
 @keyframes gp-fade-slide {

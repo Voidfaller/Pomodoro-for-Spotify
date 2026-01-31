@@ -11,11 +11,20 @@
 
     const STORAGE_KEY = "gp_pomodoro_remaining";
     const RUNNING_KEY = "gp_pomodoro_running";
+    const PHASE_KEY = "gp_pomodoro_phase";
 
     let remaining = 0;
 
     function getRemainingSeconds() {
         return remaining;
+    }
+
+    function getPhase() {
+        return localStorage.getItem(PHASE_KEY) || "work";
+    }
+
+    function setPhase(phase) {
+        localStorage.setItem(PHASE_KEY, phase);
     }
 
     function start(seconds) {
@@ -56,7 +65,9 @@
         start,
         stop,
         isRunning,
-        getRemainingSeconds
+        getRemainingSeconds,
+        getPhase,
+        setPhase
     };
 
 })();
