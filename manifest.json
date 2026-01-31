@@ -5,6 +5,7 @@
   "subfiles": [
     "src/settingsManager.js",
     "src/icons.js",
+    "src/audioNotification.js",
     "src/Digit.js",
     "src/SettingsModal.js",
     "src/PomodoroApp.js"
