@@ -99,13 +99,17 @@ function PomodoroApp() {
         });
     }
 
-    const viewLabel = viewMode === "timer"
-        ? "Timer"
-        : viewMode === "longBreak"
-            ? "Long Break"
-            : viewMode === "shortBreak"
-                ? "Short Break"
-                : "Pomodoro Cycles";
+    const viewLabel = (() => {
+        if (isRunning) {
+            if (phase === "work") return "Work";
+            if (phase === "shortBreak") return "Short Break";
+            if (phase === "longBreak") return "Long Break";
+        }
+        if (viewMode === "timer") return "Timer";
+        if (viewMode === "longBreak") return "Long Break";
+        if (viewMode === "shortBreak") return "Short Break";
+        return "Pomodoro Cycles";
+    })();
 
     const renderTimeDigits = (timeDigits, setTimeDigits, disabled) => ([
         React.createElement(Digit, {
@@ -178,6 +182,21 @@ function PomodoroApp() {
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
   <circle cx="12" cy="12" r="10" fill="none" stroke="white" stroke-width="2"/>
 </svg>
+`);
+    const playIcon = encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white">
+  <path d="M8 5v14l11-7z"/>
+</svg>
+`);
+    const pauseIcon = encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white">
+  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+</svg>
+`);
+    const resetIcon = encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white">
+  <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+</svg>
 `); return React.createElement(
         "div",
         { className: appClassName },
@@ -191,8 +210,20 @@ function PomodoroApp() {
         ),
         isRunning && viewMode !== "timer" && React.createElement("div", { className: "gp-view-note" }, "Settings locked while running"),
         React.createElement("div", { className: "gp-controls" },
-            React.createElement("button", { onClick: toggleRunning, className: "gp-button gp-button--spaced" }, isRunning ? "Pause" : "Start"),
-            React.createElement("button", { onClick: resetTimer, className: "gp-button gp-button--spaced" }, "Reset"),
+            React.createElement("img", { 
+                src: `data:image/svg+xml,${isRunning ? pauseIcon : playIcon}`, 
+                onClick: toggleRunning, 
+                className: "gp-icon-button gp-button--spaced",
+                title: isRunning ? "Pause" : "Start",
+                alt: isRunning ? "Pause" : "Start"
+            }),
+            React.createElement("img", { 
+                src: `data:image/svg+xml,${resetIcon}`, 
+                onClick: resetTimer, 
+                className: "gp-icon-button gp-button--spaced",
+                title: "Reset",
+                alt: "Reset"
+            }),
         )
     );
 }
