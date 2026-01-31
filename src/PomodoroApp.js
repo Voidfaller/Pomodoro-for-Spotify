@@ -1,17 +1,17 @@
 function PomodoroApp() {
     // Load saved settings or use defaults
     const savedSettings = loadSettings();
-    
+
     const [pomodoroDigits, setPomodoroDigits] = useState(savedSettings?.pomodoroDigits || [2, 5, 0, 0]);
     const [shortBreakDigits, setShortBreakDigits] = useState(savedSettings?.shortBreakDigits || [0, 5, 0, 0]);
     const [longBreakDigits, setLongBreakDigits] = useState(savedSettings?.longBreakDigits || [1, 5, 0, 0]);
     const [pomodoroAmount, setPomodoroAmount] = useState(savedSettings?.pomodoroAmount || 4);
-    
+
     // Initialize phase from clock
     const [phase, setPhase] = useState(() => {
         return (window.GPClock && window.GPClock.getPhase) ? window.GPClock.getPhase() : "work";
     });
-    
+
     // Initialize digits based on current phase
     const [digits, setDigits] = useState(() => {
         if (window.GPClock && window.GPClock.isRunning()) {
@@ -39,6 +39,7 @@ function PomodoroApp() {
     const [isRunning, setIsRunning] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [continuousTimer, setContinuousTimer] = useState(savedSettings?.continuousTimer || false);
+    const [audioNotifications, setAudioNotifications] = useState(savedSettings?.audioNotifications !== undefined ? savedSettings.audioNotifications : true);
 
     // Create refs for digit inputs
     const digitRefs = React.useRef([]);
@@ -55,9 +56,10 @@ function PomodoroApp() {
             shortBreakDigits,
             longBreakDigits,
             pomodoroAmount,
-            continuousTimer
+            continuousTimer,
+            audioNotifications
         });
-    }, [pomodoroDigits, shortBreakDigits, longBreakDigits, pomodoroAmount, continuousTimer]);
+    }, [pomodoroDigits, shortBreakDigits, longBreakDigits, pomodoroAmount, continuousTimer, audioNotifications]);
 
     useEffect(() => {
         function syncFromClock() {
@@ -81,7 +83,13 @@ function PomodoroApp() {
             const currentShortBreakDigits = currentSettings?.shortBreakDigits || [0, 5, 0, 0];
             const currentLongBreakDigits = currentSettings?.longBreakDigits || [1, 5, 0, 0];
             const isContinuous = currentSettings?.continuousTimer || false;
-            
+            const playAudio = currentSettings?.audioNotifications !== undefined ? currentSettings.audioNotifications : true;
+
+            // Play audio notification if enabled
+            if (playAudio) {
+                playNotificationSound();
+            }
+
             // Stop and immediately restart with the appropriate phase (if continuous) or just stop
             if (phase === "work") {
                 const nextCompleted = completedPomodoros + 1;
@@ -94,6 +102,7 @@ function PomodoroApp() {
                     window.GPClock.setPhase("longBreak");
                     setCompletedPomodoros(0);
                     setDigits([...currentLongBreakDigits]);
+                    Spicetify.showNotification("Work session complete! Time for a long break!");
                     if (isContinuous) {
                         window.GPClock.start(nextSeconds);
                         setIsRunning(true);
@@ -109,6 +118,7 @@ function PomodoroApp() {
                     window.GPClock.setPhase("shortBreak");
                     setCompletedPomodoros(nextCompleted);
                     setDigits([...currentShortBreakDigits]);
+                    Spicetify.showNotification(`Work session complete! Short break time! (${nextCompleted}/${normalizedPomodoroAmount})`);
                     if (isContinuous) {
                         window.GPClock.start(nextSeconds);
                         setIsRunning(true);
@@ -125,6 +135,7 @@ function PomodoroApp() {
                 setPhase("work");
                 window.GPClock.setPhase("work");
                 setDigits([...currentPomodoroDigits]);
+                Spicetify.showNotification("Break over! Time to get back to work!");
                 if (isContinuous) {
                     window.GPClock.start(nextSeconds);
                     setIsRunning(true);
@@ -134,12 +145,12 @@ function PomodoroApp() {
             }
 
         }
-        
+
         // Sync running state from clock to ensure UI matches actual timer state
         if (window.GPClock && window.GPClock.isRunning()) {
             setIsRunning(true);
         }
-        
+
         window.addEventListener("gp-pomodoro-tick", syncFromClock);
         window.addEventListener("gp-pomodoro-finished", onFinished);
 
@@ -161,7 +172,7 @@ function PomodoroApp() {
     function toggleRunning() {
         // Check actual clock state instead of relying on local state
         const clockIsRunning = window.GPClock && window.GPClock.isRunning();
-        
+
         if (clockIsRunning) {
             window.GPClock.stop();
             setIsRunning(false);
@@ -300,7 +311,9 @@ function PomodoroApp() {
             isOpen: showSettings,
             onClose: () => setShowSettings(false),
             continuousTimer,
-            onContinuousTimerChange: setContinuousTimer
+            onContinuousTimerChange: setContinuousTimer,
+            audioNotifications,
+            onAudioNotificationsChange: setAudioNotifications
         }),
         // View Label
         React.createElement("div", { className: "gp-view-label gp-animate", key: `label-${viewMode}` }, viewLabel),
@@ -312,23 +325,23 @@ function PomodoroApp() {
         ),
         isRunning && viewMode !== "timer" && React.createElement("div", { className: "gp-view-note" }, "Settings locked while running"),
         React.createElement("div", { className: "gp-controls" },
-            React.createElement("img", { 
-                src: `data:image/svg+xml,${isRunning ? ICONS.pauseIcon : ICONS.playIcon}`, 
-                onClick: toggleRunning, 
+            React.createElement("img", {
+                src: `data:image/svg+xml,${isRunning ? ICONS.pauseIcon : ICONS.playIcon}`,
+                onClick: toggleRunning,
                 className: "gp-icon-button gp-button--spaced",
                 title: isRunning ? "Pause" : "Start",
                 alt: isRunning ? "Pause" : "Start"
             }),
-            React.createElement("img", { 
-                src: `data:image/svg+xml,${ICONS.resetIcon}`, 
-                onClick: resetTimer, 
+            React.createElement("img", {
+                src: `data:image/svg+xml,${ICONS.resetIcon}`,
+                onClick: resetTimer,
                 className: "gp-icon-button gp-button--spaced",
                 title: "Reset",
                 alt: "Reset"
             }),
-            React.createElement("img", { 
-                src: `data:image/svg+xml,${ICONS.settingsIcon}`, 
-                onClick: () => setShowSettings(true), 
+            React.createElement("img", {
+                src: `data:image/svg+xml,${ICONS.settingsIcon}`,
+                onClick: () => setShowSettings(true),
                 className: "gp-icon-button gp-button--spaced",
                 title: "Settings",
                 alt: "Settings"
