@@ -45,42 +45,79 @@ function PomodoroApp() {
     const normalizedPomodoroAmount = Math.max(1, pomodoroAmount);
 
     useEffect(() => {
-        if (!isRunning) return;
+        function syncFromClock() {
+            const seconds = window.GPClock.getRemainingSeconds();
 
-        const interval = setInterval(() => {
-            if (secondsLeft <= 0) {
-                clearInterval(interval);
-                if (phase === "work") {
-                    const nextCompleted = completedPomodoros + 1;
-                    if (nextCompleted >= normalizedPomodoroAmount) {
-                        setPhase("longBreak");
-                        setCompletedPomodoros(0);
-                        setDigits([...longBreakDigits]);
-                    } else {
-                        setPhase("shortBreak");
-                        setCompletedPomodoros(nextCompleted);
-                        setDigits([...shortBreakDigits]);
-                    }
-                } else {
-                    setPhase("work");
-                    setDigits([...pomodoroDigits]);
-                }
-                return;
-            }
-            let newSeconds = secondsLeft - 1;
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+
             setDigits([
-                Math.floor(newSeconds / 600),
-                Math.floor((newSeconds % 600) / 60),
-                Math.floor((newSeconds % 60) / 10),
-                newSeconds % 10,
+                Math.floor(minutes / 10),
+                minutes % 10,
+                Math.floor(secs / 10),
+                secs % 10
             ]);
-        }, 1000);
+        }
 
-        return () => clearInterval(interval);
-    }, [isRunning, digits, phase, completedPomodoros, normalizedPomodoroAmount, shortBreakDigits, longBreakDigits, pomodoroDigits]);
+        function onFinished() {
+            if (phase === "work") {
+                const nextCompleted = completedPomodoros + 1;
+                if (nextCompleted >= normalizedPomodoroAmount) {
+                    setPhase("longBreak");
+                    setCompletedPomodoros(0);
+                    setDigits([...longBreakDigits]);
+                    window.GPClock.start(longBreakDigits[0] * 600 +
+                        longBreakDigits[1] * 60 +
+                        longBreakDigits[2] * 10 +
+                        longBreakDigits[3]);
+                } else {
+                    setPhase("shortBreak");
+                    setCompletedPomodoros(nextCompleted);
+                    setDigits([...shortBreakDigits]);
+                    window.GPClock.start(shortBreakDigits[0] * 600 +
+                        shortBreakDigits[1] * 60 +
+                        shortBreakDigits[2] * 10 +
+                        shortBreakDigits[3]);
+                }
+            }
+            else {
+                setPhase("work");
+                setDigits([...pomodoroDigits]);
+                window.GPClock.start(pomodoroDigits[0] * 600 +
+                    pomodoroDigits[1] * 60 +
+                    pomodoroDigits[2] * 10 +
+                    pomodoroDigits[3]);
+
+            }
+
+        }
+        window.addEventListener("gp-pomodoro-tick", syncFromClock);
+        window.addEventListener("gp-pomodoro-finished", onFinished);
+
+        syncFromClock();
+
+        return () => {
+            window.removeEventListener("gp-pomodoro-tick", syncFromClock);
+            window.removeEventListener("gp-pomodoro-finished", onFinished);
+        };
+    }, [
+        phase,
+        completedPomodoros,
+        normalizedPomodoroAmount,
+        pomodoroDigits,
+        shortBreakDigits,
+        longBreakDigits
+    ])
 
     function toggleRunning() {
-        setIsRunning(!isRunning);
+        if (isRunning) {
+            window.GPClock.stop();
+            setIsRunning(false);
+        }
+        else {
+            window.GPClock.start(secondsLeft);
+            setIsRunning(true);
+        }
     }
 
     function resetTimer() {
@@ -187,6 +224,7 @@ function PomodoroApp() {
         )
     );
 }
+
 
 // Required by Spicetify
 function render() {
