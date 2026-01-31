@@ -117,6 +117,7 @@ function PomodoroApp() {
                 const nextCompleted = completedPomodoros + 1;
                 if (nextCompleted >= normalizedPomodoroAmount) {
                     setPhase("longBreak");
+                    window.GPClock.setPhase("longBreak");
                     setCompletedPomodoros(0);
                     setDigits([...longBreakDigits]);
                     window.GPClock.start(longBreakDigits[0] * 600 +
@@ -125,6 +126,7 @@ function PomodoroApp() {
                         longBreakDigits[3]);
                 } else {
                     setPhase("shortBreak");
+                    window.GPClock.setPhase("shortBreak");
                     setCompletedPomodoros(nextCompleted);
                     setDigits([...shortBreakDigits]);
                     window.GPClock.start(shortBreakDigits[0] * 600 +
@@ -135,6 +137,7 @@ function PomodoroApp() {
             }
             else {
                 setPhase("work");
+                window.GPClock.setPhase("work");
                 setDigits([...pomodoroDigits]);
                 window.GPClock.start(pomodoroDigits[0] * 600 +
                     pomodoroDigits[1] * 60 +
@@ -174,6 +177,7 @@ function PomodoroApp() {
             setIsRunning(false);
         }
         else {
+            window.GPClock.setPhase(phase);
             window.GPClock.start(secondsLeft);
             setIsRunning(true);
         }
@@ -181,6 +185,7 @@ function PomodoroApp() {
 
     function resetTimer() {
         window.GPClock.stop();
+        window.GPClock.setPhase("work");
         setDigits([...pomodoroDigits]);
         setPhase("work");
         setCompletedPomodoros(0);

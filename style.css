@@ -152,6 +152,56 @@
 	transform: scale(0.95);
 }
 
+/* Navbar Widget Styles */
+.gp-navbar-widget-container {
+	display: inline-flex;
+	align-items: center;
+	margin-left: 16px;
+	flex-shrink: 0;
+}
+
+.gp-navbar-timer {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 36px;
+	padding: 0 12px;
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 6px;
+	font-size: 13px;
+	color: white;
+	backdrop-filter: blur(10px);
+	cursor: default;
+	user-select: none;
+}
+
+.gp-navbar-timer-icon {
+	display: flex;
+	align-items: center;
+	opacity: 0.9;
+}
+
+.gp-navbar-timer-info {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.gp-navbar-timer-label {
+	font-size: 10px;
+	opacity: 0.7;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.gp-navbar-timer-display {
+	font-family: 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+}
+
 @keyframes gp-fade-slide {
 	from {
 		opacity: 0;
