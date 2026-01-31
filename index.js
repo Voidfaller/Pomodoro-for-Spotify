@@ -1,7 +1,7 @@
 const { React, ReactDOM } = Spicetify;
 const { useState, useEffect } = React;
 
-function Digit({ value, onChange, decimal = false, disabled = false }) {
+function Digit({ value, onChange, decimal = false, disabled = false, inputRef, onInputComplete }) {
     const [hover, setHover] = useState(false);
 
     let increment, decrement;
@@ -14,6 +14,30 @@ function Digit({ value, onChange, decimal = false, disabled = false }) {
         increment = () => onChange((value + 1) % 10);
         decrement = () => onChange((value + 9) % 10);
     }
+
+    const handleInputChange = (e) => {
+        const inputValue = e.target.value;
+        if (inputValue === '') {
+            onChange(0);
+        } else {
+            let num = parseInt(inputValue, 10);
+            if (isNaN(num)) return;
+            
+            if (decimal) {
+                num = Math.max(0, Math.min(5, num));
+            } else {
+                num = Math.max(0, Math.min(9, num));
+            }
+            onChange(num);
+        }
+        // Reset input to display the digit value
+        e.target.value = '';
+        // Trigger focus on next input
+        if (onInputComplete) {
+            onInputComplete();
+        }
+    };
+
     return React.createElement(
         "div",
         {
@@ -22,7 +46,20 @@ function Digit({ value, onChange, decimal = false, disabled = false }) {
             onMouseLeave: () => setHover(false),
         },
         React.createElement("button", { onClick: increment, className: `gp-arrow${disabled || !hover ? " gp-arrow--hidden" : ""}`, disabled: disabled }, "▲"),
-        React.createElement("span", { className: "gp-digit-value" }, value),
+        React.createElement("input", { 
+            ref: inputRef,
+            type: "text", 
+            className: "gp-digit-input",
+            maxLength: "1",
+            placeholder: String(value),
+            onChange: handleInputChange,
+            disabled: disabled,
+            onKeyDown: (e) => {
+                if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete') {
+                    e.preventDefault();
+                }
+            }
+        }),
         React.createElement("button", { onClick: decrement, className: `gp-arrow${disabled || !hover ? " gp-arrow--hidden" : ""}`, disabled: disabled }, "▼")
     );
 }
@@ -51,6 +88,9 @@ function PomodoroApp() {
     const [phase, setPhase] = useState("work");
     const [completedPomodoros, setCompletedPomodoros] = useState(0);
     const [isRunning, setIsRunning] = useState(false);
+
+    // Create refs for digit inputs
+    const digitRefs = React.useRef([]);
 
     // Convert digits to total seconds
     const secondsLeft = digits[0] * 600 + digits[1] * 60 + digits[2] * 10 + digits[3];
@@ -174,12 +214,16 @@ function PomodoroApp() {
             value: timeDigits[0],
             onChange: val => setTimeDigits([val, timeDigits[1], timeDigits[2], timeDigits[3]]),
             disabled,
+            inputRef: el => digitRefs.current[0] = el,
+            onInputComplete: () => digitRefs.current[1]?.focus(),
         }),
         React.createElement(Digit, {
             key: "t1",
             value: timeDigits[1],
             onChange: val => setTimeDigits([timeDigits[0], val, timeDigits[2], timeDigits[3]]),
             disabled,
+            inputRef: el => digitRefs.current[1] = el,
+            onInputComplete: () => digitRefs.current[2]?.focus(),
         }),
         React.createElement("span", { key: "colon", className: "gp-colon" }, ":"),
         React.createElement(Digit, {
@@ -188,12 +232,15 @@ function PomodoroApp() {
             onChange: val => setTimeDigits([timeDigits[0], timeDigits[1], val, timeDigits[3]]),
             decimal: true,
             disabled,
+            inputRef: el => digitRefs.current[2] = el,
+            onInputComplete: () => digitRefs.current[3]?.focus(),
         }),
         React.createElement(Digit, {
             key: "t3",
             value: timeDigits[3],
             onChange: val => setTimeDigits([timeDigits[0], timeDigits[1], timeDigits[2], val]),
             disabled,
+            inputRef: el => digitRefs.current[3] = el,
         }),
     ]);
 
@@ -207,12 +254,15 @@ function PomodoroApp() {
                 value: tens,
                 onChange: val => setPomodoroAmount((val * 10) + ones),
                 disabled,
+                inputRef: el => digitRefs.current[0] = el,
+                onInputComplete: () => digitRefs.current[1]?.focus(),
             }),
             React.createElement(Digit, {
                 key: "a1",
                 value: ones,
                 onChange: val => setPomodoroAmount((tens * 10) + val),
                 disabled,
+                inputRef: el => digitRefs.current[1] = el,
             })
         ];
     };
